@@ -1,0 +1,84 @@
+version: "3"
+services:
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+
+  auth_db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: pass
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ../Auth/database/data:/var/lib/postgresql/data
+    ports:
+      - 5433:5432
+
+  auth_migration:
+    build: 
+      context: ../Auth
+      dockerfile: dockerfile.migration
+    depends_on:
+      - auth_db
+    environment:
+      NODE_ENV: docker
+
+  # backend_db:
+  #   image: postgres
+  #   environment:
+  #     POSTGRES_PASSWORD: pass
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_DB: postgres
+  #   volumes:
+  #     - ../Backend/database/data:/var/lib/postgresql/data
+  #   ports:
+  #     - 5433:5432
+
+  # backend_migration:
+  #   build: 
+  #     context: ../Backend
+  #     dockerfile: dockerfile.migration
+  #   depends_on:
+  #     - backend_db
+  #   environment:
+  #     NODE_ENV: docker
+    
+    
+  auth_server:
+    build: ../Auth
+    depends_on:
+      - auth_db
+      - auth_migration
+      - redis
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: auth_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: users
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NODE_ENV: docker
+
+  # backend_server:
+  #   build: ../Backend
+  #   depends_on:
+  #     - backend_db
+  #     - backend_migration
+  #     - auth_server
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     DB_HOST: backend_db
+  #     DB_USERNAME: postgres
+  #     DB_PASSWORD: postgres
+  #     DB_DATABASE: users
+  #     DB_PORT: 5432
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #     NODE_ENV: docker
